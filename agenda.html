@@ -89,6 +89,20 @@ h1{font-family:Anton;font-weight:400;font-size:34px;letter-spacing:.01em;line-he
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(80px);background:#fff;color:#111;font-weight:600;font-size:14px;padding:12px 18px;border-radius:999px;transition:.3s;opacity:0;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .hide{display:none!important}
+/* notificação no celular (simulada na prévia) */
+.push{position:fixed;left:50%;top:10px;width:min(94vw,420px);transform:translate(-50%,-140%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2);z-index:60;background:rgba(40,40,44,.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 18px 40px rgba(0,0,0,.55);cursor:pointer}
+.push.show{transform:translate(-50%,0)}
+.push .pi{width:38px;height:38px;border-radius:10px;background:var(--gold);color:#111;display:grid;place-items:center;font-family:Anton;font-size:17px;flex:none}
+.push .pb{flex:1;min-width:0;font-size:13.5px;line-height:1.35}
+.push .ph{display:flex;justify-content:space-between;font-size:11.5px;color:#b4b4bb;margin-bottom:2px}
+.push .ph b{color:#e4e4e7;font-weight:600;letter-spacing:.02em}
+.push .pt{font-weight:700}
+.push .pc{position:absolute;left:0;right:0;top:100%;text-align:center;font-size:11.5px;color:var(--gold2);padding-top:6px;font-weight:600;text-shadow:0 1px 4px #000}
+.btn.zap{background:#25d366;color:#08240f}
+.btn.zap:hover{background:#3be37a}
+.notif{display:flex;gap:10px;align-items:center;background:rgba(242,183,5,.08);border:1px solid rgba(242,183,5,.35);border-radius:14px;padding:11px 13px;font-size:13px;margin:4px 0 6px}
+.notif b{color:var(--gold2)}
+.new{font-size:10px;font-weight:800;background:var(--green);color:#04210e;border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:2px}
 </style>
 </head>
 <body>
@@ -101,6 +115,7 @@ h1{font-family:Anton;font-weight:400;font-size:34px;letter-spacing:.01em;line-he
 <main id="cli"></main>
 <main id="adm" class="hide"></main>
 <div class="toast" id="toast"></div>
+<div class="push" id="push" role="status" aria-live="polite"><div class="pi">01</div><div class="pb"><div class="ph"><b>01 BARBEARIA</b><span>agora</span></div><div class="pt" id="pushT"></div><div id="pushM"></div></div><div class="pc" id="pushC"></div></div>
 
 <script>
 const SV=[['Corte',45,45],['Corte + barba',75,60],['Barba',30,30],['Corte + penteado',70,45],['Sobrancelha',15,15],['Platinado',120,120],['Luzes',80,120],['Selagem',70,60],['Relaxamento',35,15],['Hidratação',25,15]];
@@ -108,6 +123,17 @@ const BARB=[{id:'g',n:'Gabriel',d:'Atencioso e caprichoso'},{id:'r',n:'Ryan',d:'
 const HRS={0:null,1:null,2:[10,20],3:[10,20],4:[10,20],5:[9,20],6:[9,20]};
 const WD=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const PIN='0101';
+const SHOP_WA='5511958376118';
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+/* Mostra como a notificação chega no celular do barbeiro (na versão final vai de verdade pro celular dele) */
+function pushNotify(b){
+ const d=new Date(b.date+'T12:00');const bn=BARB.find(x=>x.id===b.bar).n;
+ $('#pushT').textContent='💈 Novo horário com '+bn;
+ $('#pushM').textContent=b.name+' · '+SV[b.sv][0]+' · '+WD[d.getDay()]+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+' às '+b.t;
+ $('#pushC').textContent='↑ Assim chega no celular do '+bn+' na hora';
+ const p=$('#push');p.classList.add('show');clearTimeout(p._t);p._t=setTimeout(()=>p.classList.remove('show'),6500);
+ p.onclick=()=>p.classList.remove('show');
+}
 const KEY='demo01_agenda_v1';
 const $=s=>document.querySelector(s);
 const pad=n=>String(n).padStart(2,'0');
@@ -181,13 +207,14 @@ function renderCli(){
    const nm=$('#nm').value.trim(),tl=$('#tl').value.trim();
    if(nm.length<2||tl.replace(/\D/g,'').length<10){toast('Preenche nome e WhatsApp');return}
    if(!slots(st.bar,st.date,SV[st.sv][2]).some(([t,f])=>t===st.t&&f)){toast('Esse horário acabou de ser pego, escolhe outro');st.step=2;st.t=null;renderCli();return}
-   const db=load();const code=rc();db.book.push({id:'B'+Date.now(),code,bar:st.bar,date:st.date,t:st.t,sv:st.sv,name:nm,tel:tl});save();
-   st.code=code;st.step=4;renderCli();scrollTo(0,0)};
+   const db=load();const code=rc();const nb={id:'B'+Date.now(),code,bar:st.bar,date:st.date,t:st.t,sv:st.sv,name:nm,tel:tl,novo:1};db.book.push(nb);save();
+   st.code=code;st.name=nm;st.step=4;renderCli();scrollTo(0,0);setTimeout(()=>pushNotify(nb),900)};
  }else if(st.step===4){
   const d=new Date(st.date+'T12:00');const bn=BARB.find(b=>b.id===st.bar).n;
   c.innerHTML=`<div class="ok"><div class="ic">✓</div><h1>Horário confirmado!</h1><p class="sub">${SV[st.sv][0]} com ${bn}<br>${WD[d.getDay()]}, ${pad(d.getDate())}/${pad(d.getMonth()+1)} às ${st.t}</p>
   <p class="hint">Seu código pra desmarcar, se precisar:</p><div class="code">${st.code}</div>
-  <button class="btn" id="nv">Fazer outro agendamento</button><button class="btn ghost" id="cx">Desmarcar com código</button>
+  <a class="btn zap" target="_blank" rel="noopener" href="https://wa.me/${SHOP_WA}?text=${encodeURIComponent('Olá! Acabei de agendar pelo site:\n\n• Nome: '+st.name+'\n• Serviço: '+SV[st.sv][0]+'\n• Barbeiro: '+bn+'\n• Data: '+WD[d.getDay()]+', '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+' às '+st.t+'\n• Código: '+st.code)}" style="text-decoration:none">Confirmar no WhatsApp</a>
+  <button class="btn ghost" id="nv">Fazer outro agendamento</button><button class="btn ghost" id="cx">Desmarcar com código</button>
   <p class="hint" style="margin-top:18px">Dica da prévia: abre a aba <b>Painel</b> lá em cima (senha ${PIN}) pra ver esse horário na agenda do ${bn}.</p></div>`;
   $('#nv').onclick=()=>{Object.assign(st,{step:0,sv:null,bar:null,date:null,t:null});renderCli()};
   $('#cx').onclick=cancelFlow;
@@ -220,11 +247,12 @@ function renderAdm(){
  const free=slots(ad.bar,ad.date,30).filter(s=>s[1]);
  const bn=BARB.find(b=>b.id===ad.bar).n;
  c.innerHTML=`<h1>Agenda</h1><p class="sub">Escolhe o barbeiro e o dia.</p>
+ <div class="notif">🔔<span><b>Avisos no celular ativados.</b> Cada cliente que marcar, chega uma notificação na hora pro barbeiro.</span></div>
  <div class="who">${BARB.map(b=>`<button class="${ad.bar===b.id?'on':''}" data-w="${b.id}">${b.n}</button>`).join('')}</div>
  <div class="days">${ds.map(d=>`<button class="day ${HRS[d.getDay()]?'':'off'} ${ad.date===ymd(d)?'on':''}" data-d="${ymd(d)}"><small>${WD[d.getDay()]}</small><b>${d.getDate()}</b></button>`).join('')}</div>
  <div class="kpis"><div class="kpi"><b>${bk.length}</b><span>clientes</span></div><div class="kpi"><b>R$${fat}</b><span>previsto no dia</span></div><div class="kpi"><b>${free.length}</b><span>horários livres</span></div></div>
  <div class="lbl">Dia do ${bn}</div>
- <div class="ag">${items.length?items.map(i=>i.k==='b'?`<div class="it"><div class="t">${i.t}</div><div class="d"><b>${i.name}</b><small>${SV[i.sv][0]} · R$ ${SV[i.sv][1]}</small></div><a class="wa" href="https://wa.me/55${i.tel.replace(/\D/g,'')}" target="_blank" rel="noopener">Zap</a><button class="x" data-del="${i.id}">Cancelar</button></div>`:`<div class="it blk"><div class="t">${i.t}</div><div class="d"><b>Bloqueado</b><small>Horário fechado pelo barbeiro</small></div><button class="x" data-ub="${i.id}">Liberar</button></div>`).join(''):'<div class="empty">Nenhum cliente marcado ainda nesse dia.</div>'}</div>
+ <div class="ag">${items.length?items.map(i=>i.k==='b'?`<div class="it"><div class="t">${i.t}</div><div class="d"><b>${esc(i.name)}${i.novo?'<span class="new">NOVO</span>':''}</b><small>${SV[i.sv][0]} · R$ ${SV[i.sv][1]}</small></div><a class="wa" href="https://wa.me/55${i.tel.replace(/\D/g,'')}" target="_blank" rel="noopener">Zap</a><button class="x" data-del="${i.id}">Cancelar</button></div>`:`<div class="it blk"><div class="t">${i.t}</div><div class="d"><b>Bloqueado</b><small>Horário fechado pelo barbeiro</small></div><button class="x" data-ub="${i.id}">Liberar</button></div>`).join(''):'<div class="empty">Nenhum cliente marcado ainda nesse dia.</div>'}</div>
  <div class="lbl">Bloquear horário (folga, almoço…)</div>
  ${free.length?`<div class="slots">${free.map(([t])=>`<button class="slot" data-blk="${t}">${t}</button>`).join('')}</div>`:'<div class="empty">Sem horários livres pra bloquear.</div>'}
  <button class="btn ghost" id="out">Sair do painel</button>`;
