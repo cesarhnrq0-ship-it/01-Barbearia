@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Agendar · 01 Barbearia</title>
+<meta name="description" content="Agende seu horário na 01 Barbearia em Perus: escolha o serviço, o barbeiro e o horário.">
+<meta name="theme-color" content="#0b0b0c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f2b705'/%3E%3Ctext x='32' y='44' font-family='Arial Black,Arial' font-weight='900' font-size='30' text-anchor='middle' fill='%23111'%3E01%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -89,6 +92,9 @@ h1{font-family:Anton;font-weight:400;font-size:34px;letter-spacing:.01em;line-he
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(80px);background:#fff;color:#111;font-weight:600;font-size:14px;padding:12px 18px;border-radius:999px;transition:.3s;opacity:0;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .hide{display:none!important}
+.lnk{display:block;margin:22px auto 0;color:var(--mut);font-size:14px;text-decoration:underline}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.push,.toast,.opt,.btn{transition:none}}
 /* notificação no celular (simulada na prévia) */
 .push{position:fixed;left:50%;top:10px;width:min(94vw,420px);transform:translate(-50%,-140%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2);z-index:60;background:rgba(40,40,44,.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 18px 40px rgba(0,0,0,.55);cursor:pointer}
 .push.show{transform:translate(-50%,0)}
@@ -170,14 +176,18 @@ function slots(bar,date,dur){
 
 /* --- fluxo do cliente --- */
 const st={step:0,sv:null,bar:null,date:null,t:null};
+(function(){const q=new URLSearchParams(location.search);const sv=parseInt(q.get('s'),10),b=q.get('b');
+ if(BARB.some(x=>x.id===b))st.bar=b;
+ if(sv>=0&&sv<SV.length){st.sv=sv;st.step=st.bar?2:1}})();
 function days(){const a=[];const d=new Date();for(let i=0;a.length<10&&i<21;i++){const x=new Date(d);x.setDate(d.getDate()+i);a.push(x)}return a}
 function stepsBar(n){return '<div class="steps">'+[0,1,2,3].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')+'</div>'}
 function renderCli(){
  const c=$('#cli');
  if(st.step===0){
   c.innerHTML=`${stepsBar(0)}<h1>Agende seu horário</h1><p class="sub">Escolha o serviço, o barbeiro e o horário. Leva menos de 1 minuto.</p>
-  <div class="lbl">1 · Serviço</div><div class="list">${SV.map((s,i)=>`<button class="opt ${st.sv===i?'on':''}" data-sv="${i}"><span><b>${s[0]}</b><small>${s[2]>=60?(s[2]/60)+'h':s[2]+' min'}</small></span><span class="pr">R$ ${s[1]}</span></button>`).join('')}</div>`;
-  c.querySelectorAll('[data-sv]').forEach(b=>b.onclick=()=>{st.sv=+b.dataset.sv;st.step=1;renderCli();scrollTo(0,0)});
+  <div class="lbl">1 · Serviço</div><div class="list">${SV.map((s,i)=>`<button class="opt ${st.sv===i?'on':''}" data-sv="${i}"><span><b>${s[0]}</b><small>${s[2]>=60?(s[2]/60)+'h':s[2]+' min'}</small></span><span class="pr">R$ ${s[1]}</span></button>`).join('')}</div><button class="lnk" id="cx0">Já agendou? Desmarcar com o código</button>`;
+  c.querySelectorAll('[data-sv]').forEach(b=>b.onclick=()=>{st.sv=+b.dataset.sv;st.step=st.bar?2:1;st.date=null;st.t=null;renderCli();scrollTo(0,0)});
+  $('#cx0').onclick=cancelFlow;
  }else if(st.step===1){
   c.innerHTML=`<button class="back" id="bk">← Voltar</button>${stepsBar(1)}<h1>Com quem?</h1><p class="sub">${SV[st.sv][0]} · R$ ${SV[st.sv][1]}</p>
   <div class="bb">${BARB.map(b=>`<button class="opt ${st.bar===b.id?'on':''}" data-b="${b.id}"><div class="av">${b.n[0]}</div><b>${b.n}</b><small>${b.d}</small></button>`).join('')}</div>`;
@@ -202,13 +212,15 @@ function renderCli(){
   <label class="field"><span>WhatsApp</span><input id="tl" placeholder="(11) 90000-0000" inputmode="tel" autocomplete="tel"></label>
   <div class="sum"><div><span>Serviço</span><b>${SV[st.sv][0]}</b></div><div><span>Barbeiro</span><b>${bn}</b></div><div><span>Data</span><b>${WD[d.getDay()]}, ${pad(d.getDate())}/${pad(d.getMonth()+1)} às ${st.t}</b></div><div><span>Valor</span><b>R$ ${SV[st.sv][1]}</b></div></div>
   <button class="btn" id="cf">Confirmar agendamento</button>`;
+  $('#tl').oninput=e=>{let v=e.target.value.replace(/\D/g,'').slice(0,11);e.target.value=v.length>10?`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`:v.length>6?`(${v.slice(0,2)}) ${v.slice(2,6)}-${v.slice(6)}`:v.length>2?`(${v.slice(0,2)}) ${v.slice(2)}`:v};
   $('#bk').onclick=()=>{st.step=2;renderCli()};
   $('#cf').onclick=()=>{
+   if(st.saving)return;
    const nm=$('#nm').value.trim(),tl=$('#tl').value.trim();
    if(nm.length<2||tl.replace(/\D/g,'').length<10){toast('Preenche nome e WhatsApp');return}
    if(!slots(st.bar,st.date,SV[st.sv][2]).some(([t,f])=>t===st.t&&f)){toast('Esse horário acabou de ser pego, escolhe outro');st.step=2;st.t=null;renderCli();return}
-   const db=load();const code=rc();const nb={id:'B'+Date.now(),code,bar:st.bar,date:st.date,t:st.t,sv:st.sv,name:nm,tel:tl,novo:1};db.book.push(nb);save();
-   st.code=code;st.name=nm;st.step=4;renderCli();scrollTo(0,0);setTimeout(()=>pushNotify(nb),900)};
+   st.saving=1;const db=load();const code=rc();const nb={id:'B'+Date.now(),code,bar:st.bar,date:st.date,t:st.t,sv:st.sv,name:nm,tel:tl,novo:1};db.book.push(nb);save();
+   st.saving=0;st.code=code;st.name=nm;st.step=4;renderCli();scrollTo(0,0);setTimeout(()=>pushNotify(nb),900)};
  }else if(st.step===4){
   const d=new Date(st.date+'T12:00');const bn=BARB.find(b=>b.id===st.bar).n;
   c.innerHTML=`<div class="ok"><div class="ic">✓</div><h1>Horário confirmado!</h1><p class="sub">${SV[st.sv][0]} com ${bn}<br>${WD[d.getDay()]}, ${pad(d.getDate())}/${pad(d.getMonth()+1)} às ${st.t}</p>
