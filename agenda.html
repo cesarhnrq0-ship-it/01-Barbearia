@@ -237,7 +237,7 @@ function renderCli(){
   const d=new Date(st.date+'T12:00');const bn=BARB.find(b=>b.id===st.bar).n;
   c.innerHTML=`<div class="ok"><div class="ic">✓</div><h1>Horário confirmado!</h1><p class="sub">${SV[st.sv][0]} com ${bn}<br>${WD[d.getDay()]}, ${pad(d.getDate())}/${pad(d.getMonth()+1)} às ${st.t}</p>
   <p class="hint">Seu código pra desmarcar, se precisar:</p><div class="code">${st.code}</div>
-  <a class="btn zap" target="_blank" rel="noopener" href="https://wa.me/${SHOP_WA}?text=${encodeURIComponent('Olá! Acabei de agendar pelo site:\n\n• Nome: '+st.name+'\n• Serviço: '+SV[st.sv][0]+'\n• Barbeiro: '+bn+'\n• Data: '+WD[d.getDay()]+', '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+' às '+st.t+'\n• Código: '+st.code)}" style="text-decoration:none">Confirmar no WhatsApp</a>
+  <p class="hint" style="color:var(--green);font-weight:600">✓ A barbearia já foi avisada do seu horário</p>
   <button class="btn ghost" id="nv">Fazer outro agendamento</button><button class="btn ghost" id="cx">Desmarcar com código</button>
   <p class="hint" style="margin-top:18px">Dica da prévia: abre a aba <b>Painel</b> lá em cima (senha ${PIN}) pra ver esse horário na agenda do ${bn}.</p></div>`;
   $('#nv').onclick=()=>{Object.assign(st,{step:0,sv:null,bar:null,date:null,t:null});renderCli()};
